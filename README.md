@@ -6,8 +6,8 @@ Technics Audio Connect only exists for iOS and Android, so on a PC these setting
 earbuds over their own Bluetooth control channel (Airoha RACE over RFCOMM), the same one the phone app uses.
 
 <p>
-  <img src="docs/images/ui_light_ready.png" alt="Tray flyout, light theme" width="300">
-  <img src="docs/images/ui_dark_loading.png" alt="Tray flyout, dark theme" width="300">
+  <img src="docs/images/nc_dark.png" alt="Tray flyout in dark theme: noise cancelling at level 60, battery for both earbuds and the case" width="300">
+  <img src="docs/images/ambient_light.png" alt="Tray flyout in light theme: ambient sound at level 40, Transparent selected" width="300">
 </p>
 
 > Unofficial. Not affiliated with, endorsed by or supported by Panasonic or Technics. "Technics" is a trademark of Panasonic Holdings
@@ -21,6 +21,22 @@ earbuds over their own Bluetooth control channel (Airoha RACE over RFCOMM), the 
 - Read the battery level of each earbud and the case, plus the codec in use (LDAC / AAC / SBC and sample rate)
 - Global hotkey **Ctrl+Alt+E** to cycle Off → Noise cancelling → Ambient
 - Optional **Movie mode**, for the [Alternative A2DP Driver](https://www.bluetoothgoodies.com/a2dp/) only: one switch from LDAC to SBC with "reduce delay" for lower latency, and back
+
+## Screenshots
+
+The flyout opens from the tray icon and follows the Windows light or dark setting. Everything it shows has been read back from the
+earbuds, so it never claims a change the earbuds did not confirm.
+
+| Auto level | Attention mode | Off | Movie mode switching |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/images/nc_auto_dark.png" alt="Noise cancelling with Auto level on" width="190"> | <img src="docs/images/attention_dark.png" alt="Ambient sound with Attention selected" width="190"> | <img src="docs/images/off_light.png" alt="Off, with the saved noise cancelling level kept" width="190"> | <img src="docs/images/movie_switching_dark.png" alt="Movie mode switching, with a progress bar" width="190"> |
+| The earbuds pick the noise cancelling level | Brings voices and announcements forward | Levels are kept for next time | Live progress while audio reconnects |
+
+<img src="docs/images/tray_icon.png" alt="The tray icon at several sizes on light and dark taskbars, normal and dimmed" width="280">
+
+The tray icon at taskbar sizes on light and dark taskbars. It dims when the earbuds are not connected.
+
+*Screenshots use the app's built-in demo earbuds (`python tray/app.py --demo --show`).*
 
 ## Safety
 
