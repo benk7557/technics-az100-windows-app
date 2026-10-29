@@ -18,7 +18,7 @@ import uuid
 import winreg
 
 DRV = r"SYSTEM\CurrentControlSet\Services\AltA2DP\Parameters\Devices"
-DATA_DIR = r"C:\ProgramData\TechnicsAZ100Tool"
+DATA_DIR = r"C:\Program Files\TechnicsAZ100Tool\data"   # admin-only, written by the elevated helper
 RESULT = os.path.join(DATA_DIR, "last_result.json")
 DEVICE_FILE = os.path.join(DATA_DIR, "device.txt")   # the earbuds the helper was set up for (written by the setup script)
 TASKS = {"movie": "TechnicsAZ100-MovieMode-Movie", "music": "TechnicsAZ100-MovieMode-Music"}

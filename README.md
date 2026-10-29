@@ -84,7 +84,8 @@ switch back to your saved music settings. Run it from an elevated PowerShell:
 powershell -ExecutionPolicy Bypass -File tray\admin\setup_movie_helper.ps1             # or add -Address XX:XX:XX:XX:XX:XX
 ```
 
-The setup first backs up the driver's settings for your earbuds to `C:\ProgramData\TechnicsAZ100Tool`. To undo it, run
+The setup installs the helper in `C:\Program Files\TechnicsAZ100Tool`, where only administrators can change it, and first backs up
+the driver's settings for your earbuds to its `data` folder. To undo it, run
 `tray\admin\remove_movie_helper.ps1`. If you never run the setup, the Movie mode switch stays hidden.
 
 ## How it works

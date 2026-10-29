@@ -2,10 +2,11 @@
 ONE-TIME ELEVATED SETUP for Movie mode. Run once; approve the single Windows prompt. After that the tray app never needs one.
 
 What this does (and only this):
-  1. Creates C:\ProgramData\TechnicsAZ100Tool for the saved music settings and a small log (administrators write, users read).
+  1. Installs MovieModeHelper.ps1 into C:\Program Files\TechnicsAZ100Tool, with its data (the chosen earbuds, saved music settings,
+     backups, a small log) in the data subfolder. Program Files is used because only administrators can create or change anything
+     there, so no other account can plant or swap a file the elevated helper later reads or writes. Users can still read it.
   2. Backs up the driver's current settings for the Technics earbuds there (a .reg file, so everything can be put back).
-  3. Installs MovieModeHelper.ps1 into C:\Program Files\TechnicsAZ100Tool (only administrators can change it).
-  4. Registers two scheduled tasks that run the helper elevated for YOU only, with no triggers and no arguments:
+  3. Registers two scheduled tasks that run the helper elevated for YOU only, with no triggers and no arguments:
        TechnicsAZ100-MovieMode-Movie   and   TechnicsAZ100-MovieMode-Music
 Undo everything with remove_movie_helper.ps1.
 The earbuds are found by name (EAH-AZ100) among the paired devices; pass -Address XX:XX:XX:XX:XX:XX if that finds none or several.
@@ -18,7 +19,7 @@ if (-not ([Security.Principal.WindowsPrincipal]$id).IsInRole([Security.Principal
 }
 $src      = Join-Path $PSScriptRoot 'MovieModeHelper.ps1'
 $progDir  = 'C:\Program Files\TechnicsAZ100Tool'
-$dataDir  = 'C:\ProgramData\TechnicsAZ100Tool'
+$dataDir  = Join-Path $progDir 'data'
 $helper   = Join-Path $progDir 'MovieModeHelper.ps1'
 if (-not (Test-Path -LiteralPath $src)) { throw "missing $src" }
 
@@ -35,48 +36,19 @@ $Address = $Address.ToUpper()
 $dev = '0000' + ($Address -replace ':', '').ToLower()
 Write-Host "Earbuds: $Address"
 
-# 1. data folder first, before anything is written into it: administrators and SYSTEM write, users only read.
-# Any user can create folders in ProgramData, so a folder that is already there must be an administrator's and not a link.
-$adminSid = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')
-if (Test-Path -LiteralPath $dataDir) {
-  if ((Get-Item -LiteralPath $dataDir -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "$dataDir is a link; delete it and run setup again" }
-  $owner = (Get-Acl -LiteralPath $dataDir).GetOwner([Security.Principal.SecurityIdentifier]).Value
-  if (@('S-1-5-18', 'S-1-5-32-544') -notcontains $owner) {
-    throw "$dataDir already exists and is owned by $owner, not by an administrator. Check what is in it, delete it, and run setup again."
-  }
-  foreach ($f in Get-ChildItem -LiteralPath $dataDir -Force) {
-    if ($f.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "$($f.FullName) is a link; delete it and run setup again" }
-  }
-} else {
-  New-Item -ItemType Directory -Path $dataDir | Out-Null
-}
-$acl = New-Object Security.AccessControl.DirectorySecurity
-$acl.SetOwner($adminSid)
-$acl.SetAccessRuleProtection($true, $false)
-foreach ($sid in 'S-1-5-18', 'S-1-5-32-544') {
-  $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($sid)), 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
-}
-$acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier('S-1-5-32-545')), 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None', 'Allow')))
-Set-Acl -LiteralPath $dataDir -AclObject $acl
-foreach ($f in Get-ChildItem -LiteralPath $dataDir -Force) {     # files from an earlier setup: administrators' and inherited rules only
-  & icacls.exe $f.FullName /setowner '*S-1-5-32-544' /C /Q | Out-Null
-  & icacls.exe $f.FullName /reset /C /Q | Out-Null
-}
+# 1. install the helper and its data folder (both inherit Program Files' rules: administrators and SYSTEM write, users read)
+New-Item -ItemType Directory -Force -Path $dataDir | Out-Null
+Copy-Item -LiteralPath $src -Destination $helper -Force
 Set-Content -LiteralPath (Join-Path $dataDir 'device.txt') -Value $Address -Encoding ASCII
-Write-Host "Prepared $dataDir"
+Write-Host "Installed $helper"
 
 # 2. backup of the driver's current settings for this device
 $backup = Join-Path $dataDir ("next_backup_{0:yyyyMMdd_HHmmss}.reg" -f (Get-Date))
 & reg.exe export "HKLM\SYSTEM\CurrentControlSet\Services\AltA2DP\Parameters\Devices\Next\$dev" $backup /y | Out-Null
-if (-not (Test-Path -LiteralPath $backup)) { throw 'could not back up the current settings; stopping before changing anything' }
+if (-not (Test-Path -LiteralPath $backup)) { throw 'could not back up the current settings; stopping before registering anything' }
 Write-Host "Backed up current driver settings to $backup"
 
-# 3. install the helper into a folder only administrators can write
-New-Item -ItemType Directory -Force -Path $progDir | Out-Null
-Copy-Item -LiteralPath $src -Destination $helper -Force
-Write-Host "Installed $helper"
-
-# 4. the two fixed tasks, elevated for this user, no triggers
+# 3. the two fixed tasks, elevated for this user, no triggers
 $user = $id.Name
 foreach ($p in 'movie', 'music') {
   $name = 'TechnicsAZ100-MovieMode-' + (Get-Culture).TextInfo.ToTitleCase($p)
@@ -86,6 +58,9 @@ foreach ($p in 'movie', 'music') {
   $set  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -StartWhenAvailable:$false
   Register-ScheduledTask -TaskName $name -Action $act -Principal $prin -Settings $set -Force -Description 'Movie mode helper for the Technics AZ100 tray tool. Starts only on demand.' | Out-Null
   Write-Host "Registered task $name (runs as $user, elevated, no triggers)"
+}
+if (Test-Path -LiteralPath 'C:\ProgramData\TechnicsAZ100Tool') {
+  Write-Host 'Note: C:\ProgramData\TechnicsAZ100Tool is from an older version and is no longer used. Delete it once you no longer need its backups.'
 }
 Write-Host ''
 Write-Host 'Done. Nothing has been changed yet. The tray app can now start these tasks without any prompt.'

@@ -18,29 +18,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$DataDir  = 'C:\ProgramData\TechnicsAZ100Tool'
-
-# Everything below trusts DataDir, so first make sure no ordinary user could have planted or changed anything in it.
-$AdminSids   = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')  # SYSTEM, Administrators, TrustedInstaller
-$WriteRights = [Security.AccessControl.FileSystemRights]'Write, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
-function Get-UntrustedReason($dir) {
-  if (-not (Test-Path -LiteralPath $dir)) { return $null }      # a missing folder is reported further down
-  $items = @(Get-Item -LiteralPath $dir -Force) + @(Get-ChildItem -LiteralPath $dir -Force)
-  foreach ($item in $items) {
-    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { return "$($item.FullName) is a link" }
-    $acl = Get-Acl -LiteralPath $item.FullName
-    if ($AdminSids -notcontains $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value) { return "$($item.FullName) is not owned by an administrator" }
-    foreach ($r in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
-      if ($r.AccessControlType -eq 'Allow' -and ($r.FileSystemRights -band $WriteRights) -and $AdminSids -notcontains $r.IdentityReference.Value) {
-        return "$($item.FullName) can be changed by $($r.IdentityReference.Value)"
-      }
-    }
-  }
-  $null
-}
-$untrusted = Get-UntrustedReason $DataDir
-if ($untrusted) {                                               # write nothing at all, not even the result file
-  Write-Host "refused: $untrusted. Run setup_movie_helper.ps1 again."
+# Installed by setup under Program Files, where only administrators can create or change anything, so no other account can plant
+# or swap a file this elevated script reads or writes. If it is missing, write nothing at all (not even the result file).
+$DataDir  = 'C:\Program Files\TechnicsAZ100Tool\data'
+if (-not $DryRun -and -not (Test-Path -LiteralPath $DataDir -PathType Container)) {
+  Write-Host "refused: setup has not been run (missing $DataDir)"
   exit 1
 }
 
