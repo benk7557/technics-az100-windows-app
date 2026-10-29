@@ -96,8 +96,13 @@ No code or assets from the official app are included here.
 
 ## How it was built
 
+I designed and led this project. I defined the problem and the scope, set the safety rules the tool must never break, decided
+what to build and what to leave out, ran every test on the real earbuds, and made the call at each step. Claude Code, Anthropic's
+AI coding agent, did most of the hands-on technical work under that direction: reading the decompiled app, decoding the captures
+and writing the code.
+
 - **Found the protocol.** Static analysis of the Android app showed it runs on an Airoha chipset and talks to the earbuds with
-  Airoha's RACE command protocol over a Bluetooth serial channel (RFCOMM). I mapped the frame format and the command IDs for each setting.
+  Airoha's RACE command protocol over a Bluetooth serial channel (RFCOMM). From there, the frame format and the command ID for each setting were mapped.
 - **Sorted safe commands from dangerous ones.** One command that looked like a harmless connect handshake turned out to be
   **factory reset**. A separate review pass caught it. After that, the tool was built around a short allowlist with no way to send raw bytes.
 - **Checked against the real traffic.** I captured the official app's Bluetooth traffic on an Android phone and decoded it. Frames,
@@ -108,8 +113,6 @@ No code or assets from the official app are included here.
   A race let the UI show a state the earbuds weren't in. The hotkey could hold the control channel open forever.
 - **Hardened the elevated part.** The Movie mode helper runs only as two fixed scheduled tasks that take no input. A security review
   then moved its data to a folder only administrators can write.
-- **Built with AI assistance.** I directed the research, set the safety rules, ran the hardware tests and made the calls, working
-  with Claude Code as a pair programmer.
 
 ### Tools
 
