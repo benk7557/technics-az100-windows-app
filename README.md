@@ -94,6 +94,36 @@ the driver's settings for your earbuds to its `data` folder. To undo it, run
 analysis of the Android app, an HCI capture of the app, and live tests. [`docs/DESIGN.md`](docs/DESIGN.md) describes the tray UI.
 No code or assets from the official app are included here.
 
+## How it was built
+
+- **Found the protocol.** Static analysis of the Android app showed it runs on an Airoha chipset and talks to the earbuds with
+  Airoha's RACE command protocol over a Bluetooth serial channel (RFCOMM). I mapped the frame format and the command IDs for each setting.
+- **Sorted safe commands from dangerous ones.** One command that looked like a harmless connect handshake turned out to be
+  **factory reset**. A separate review pass caught it. After that, the tool was built around a short allowlist with no way to send raw bytes.
+- **Checked against the real traffic.** I captured the official app's Bluetooth traffic on an Android phone and decoded it. Frames,
+  IDs and replies matched the notes byte for byte.
+- **Tested on hardware, one step at a time.** Read-only first, then a write of the value already set, then real changes, each read back
+  and verified. That came to about 25 writes with no errors. A fake-earbud simulator runs the same checks offline (`selftest`).
+- **Fixed what live use exposed.** Windows' clock ticks about every 15 ms, which made every read wait a full 250 ms timeout.
+  A race let the UI show a state the earbuds weren't in. The hotkey could hold the control channel open forever.
+- **Hardened the elevated part.** The Movie mode helper runs only as two fixed scheduled tasks that take no input. A security review
+  then moved its data to a folder only administrators can write.
+- **Built with AI assistance.** I directed the research, set the safety rules, ran the hardware tests and made the calls, working
+  with Claude Code as a pair programmer.
+
+### Tools
+
+| Area | Tools |
+|---|---|
+| Static analysis | [JADX](https://github.com/skylot/jadx) on OpenJDK 21 |
+| Traffic capture | Android Bluetooth HCI snoop log, Wireshark / tshark |
+| Screen-recording review | FFmpeg (frame sheets lined up with the capture timeline) |
+| Bluetooth on Windows | Python `ctypes` over Winsock (SDP lookup, RFCOMM sockets) and `bthprops` |
+| Tray app | Python, [pystray](https://github.com/moses-palmer/pystray), [pywebview](https://pywebview.flowrl.com/) (Edge WebView2), Pillow, HTML/CSS/JS |
+| UI testing | Playwright (light/dark, states, interaction) |
+| Movie mode | PowerShell, Windows Task Scheduler, [Alternative A2DP Driver](https://www.bluetoothgoodies.com/a2dp/) |
+| Development | Claude Code; Impeccable for UI design direction and review |
+
 ## Legal
 
 - This is an independent project, made so that earbuds you own can work with Windows. It is not affiliated with, endorsed by or
