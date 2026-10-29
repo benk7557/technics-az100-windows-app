@@ -1,0 +1,236 @@
+/* Audiogram Chart: paper ground, ink, hairline rules. Blue and red are reserved for the left and right earbud, nothing else. */
+:root {
+  color-scheme: light dark;
+  --paper: #fbfbfa;
+  --ink: #14181f;
+  --mute: #5d6672;
+  --rule: #dfe2e6;     /* hairline grid */
+  --track: #8d949f;    /* unfilled slider track: 3:1 against the paper */
+  --well: #f1f2f3;
+  --left: #1f5fbf;
+  --right: #c8321f;
+  --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI Light", "Segoe UI", system-ui, sans-serif;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #15181d;
+    --ink: #eef0f3;
+    --mute: #9aa3af;
+    --rule: #2a2f37;
+    --track: #5f6874;
+    --well: #1d2127;
+    --left: #6ea2ff;
+    --right: #ff7a66;
+  }
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px/1.35 var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  cursor: default;
+}
+
+::selection { background: var(--ink); color: var(--paper); }
+
+.plate {
+  height: 100%;
+  padding: 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.plate:focus { outline: none; }
+/* the one authored moment: the flyout rises into place when opened */
+.plate.enter { animation: rise 170ms var(--ease) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* header */
+.head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.head h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.link { font-size: 12px; color: var(--mute); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* mode control */
+.seg {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1.2fr;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--well);
+}
+.seg button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--mute);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 0;
+  cursor: default;
+  transition: background-color 120ms var(--ease), color 120ms var(--ease);
+}
+.seg button:hover { color: var(--ink); }
+.seg button:disabled, .seg button:disabled:hover { color: var(--mute); }
+.seg button[aria-checked="true"] { background: var(--ink); color: var(--paper); font-weight: 600; }
+.seg button:active { transform: scale(0.98); }
+
+/* level */
+.levelrow { display: flex; justify-content: space-between; align-items: flex-end; min-height: 52px; }
+.levelrow label { font-size: 12px; color: var(--mute); padding: 0 12px 8px 0; }
+.levelrow output {
+  font-family: var(--font-display);
+  font-size: 58px;
+  line-height: 0.9;
+  font-weight: 300;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2ch;
+  text-align: right;
+}
+.levelrow output.off { color: var(--mute); }   /* saved value while off: muted ink, never reduced opacity */
+
+input[type="range"] {
+  --fill: 60%;
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 24px;
+  margin-top: 6px;
+  background: transparent;
+  cursor: default;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(to right, var(--ink) var(--fill), var(--track) var(--fill));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -8px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  transition: transform 120ms var(--ease);
+}
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.08); }
+input[type="range"]:disabled::-webkit-slider-runnable-track { background: var(--track); }
+input[type="range"]:disabled::-webkit-slider-thumb { border-color: var(--mute); }
+
+/* ruled scale: real tick marks in the same hairline language as the battery grid */
+.ticks { position: relative; height: 22px; font-size: 10px; color: var(--mute); font-variant-numeric: tabular-nums; }
+.ticks span { position: absolute; top: 0; left: calc(var(--p) * (100% - 18px) + 9px); transform: translateX(-50%); text-align: center; }
+.ticks span::before { content: ""; display: block; width: 1px; height: 6px; margin: 0 auto 2px; background: var(--mute); }
+
+/* option band: one reserved height so Off / Noise cancelling / Ambient never move the plate */
+.opts { height: 78px; display: flex; flex-direction: column; }   /* fits the two-line Attention helper with slack at larger text scales */
+.opts > div { display: flex; flex-direction: column; gap: 6px; }
+.opts [hidden] { display: none; }
+.note { font-size: 12px; color: var(--mute); }
+.seg.sub { grid-template-columns: 1fr 1fr; }
+.seg.sub button { padding: 5px 0; font-size: 12px; }
+.switch {
+  display: flex; align-items: center; justify-content: space-between; width: 100%;
+  font: inherit; font-size: 13px; color: var(--ink); background: transparent;
+  border: 0; border-radius: 6px; padding: 5px 0; cursor: default;
+}
+.switch:disabled { color: var(--mute); }
+.switch .trk {
+  position: relative; width: 36px; height: 18px; border-radius: 8px;
+  border: 2px solid var(--ink); background: transparent; flex: none;
+  transition: background-color 120ms var(--ease);
+}
+.switch .knob {
+  position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ink); transition: transform 120ms var(--ease), background-color 120ms var(--ease);
+}
+.switch[aria-checked="true"] .trk { background: var(--ink); }
+.switch[aria-checked="true"] .knob { background: var(--paper); transform: translateX(18px); }
+.switch:disabled .trk { border-color: var(--mute); }
+.switch:disabled .knob { background: var(--mute); }
+.switch[data-unknown] .knob { transform: translateX(9px); }   /* unknown: parked mid-track, claims neither state */
+
+/* battery plot */
+.battery { border-top: 1px solid var(--rule); padding-top: 10px; }
+.battery h2 { font-size: 12px; font-weight: 600; color: var(--mute); margin-bottom: 4px; }
+#plot { display: block; width: 100%; height: auto; font-family: var(--font); font-size: 11px; font-variant-numeric: tabular-nums; }
+#plot .grid { stroke: var(--rule); stroke-width: 1; }
+#plot .axis { fill: var(--mute); }
+#plot .left { stroke: var(--left); fill: none; stroke-width: 2.2; stroke-linecap: round; }
+#plot .right { stroke: var(--right); fill: var(--paper); stroke-width: 2.2; }   /* the fill hides the hairline grid behind a marker */
+#plot .case { stroke: var(--ink); fill: var(--paper); stroke-width: 2; }
+#plot .lbl-left { fill: var(--left); font-weight: 600; }
+#plot .lbl-right { fill: var(--right); font-weight: 600; }
+#plot .lbl-case { fill: var(--ink); font-weight: 600; }
+
+/* movie mode: same hairline-ruled band as the battery; fixed height fits the worst case (two status lines + progress bar) */
+.movie { flex: none; height: 83px; border-top: 1px solid var(--rule); padding-top: 10px; }
+.movie .switch { padding: 7px 0; }   /* 32px touch target */
+.movie .note { height: 33px; margin-top: -1px; overflow: hidden; font-variant-numeric: tabular-nums; }
+.movie .note[data-err] { color: var(--ink); font-weight: 600; }   /* errors speak in ink */
+.movie .bar { height: 2px; margin-top: 6px; overflow: hidden; background: transparent; }
+.movie .bar i { display: block; height: 100%; background: var(--ink); transform: scaleX(0); transform-origin: left; transition: transform 700ms linear; }
+.movie[data-busy] .bar { background: var(--rule); }
+/* busy: inert but keeps focus; shows the target state in muted ink */
+.switch[aria-disabled="true"] { color: var(--mute); }
+.switch[aria-disabled="true"] .trk { border-color: var(--mute); }
+.switch[aria-disabled="true"] .knob { background: var(--mute); }
+.switch[aria-disabled="true"][aria-checked="true"] .trk { background: var(--mute); }
+.switch[aria-disabled="true"][aria-checked="true"] .knob { background: var(--paper); }
+
+/* footer */
+.foot {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+  font-size: 12px;
+  color: var(--mute);
+}
+.foot p { flex: 1; }
+.foot button {
+  font: inherit; font-size: 12px; font-weight: 600;
+  color: var(--ink); background: transparent;
+  border: 1px solid var(--mute); border-radius: 6px; padding: 4px 10px;
+}
+.foot button:hover { background: var(--well); }
+/* errors speak in ink, not red: red belongs to the right earbud */
+body[data-phase="error"] .foot p { color: var(--ink); font-weight: 600; }
+
+/* focus: visible, in palette */
+button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.switch:focus-visible { outline-offset: 2px; }
+.seg button:focus-visible { outline-offset: -2px; outline-color: var(--paper); box-shadow: 0 0 0 2px var(--ink); }
+
+/* loading: the real layout with empty placeholders (no text for a screen reader to announce), so nothing shifts */
+.sk { background: var(--rule); border-radius: 4px; animation: pulse 1.2s ease-in-out infinite; }
+body:not([data-phase="loading"]) .sk { background: transparent; animation: none; }
+body[data-phase="loading"] .link { min-width: 11.5em; min-height: 16px; }
+body[data-phase="loading"] .levelrow output { min-height: 52px; min-width: 2.2ch; }
+body[data-phase="loading"] .seg, body[data-phase="error"] .seg,
+body[data-phase="loading"] .level, body[data-phase="error"] .level,
+body[data-phase="loading"] .opts, body[data-phase="error"] .opts,
+body[data-stale="true"] .seg, body[data-stale="true"] .opts, body[data-stale="true"] .level, body[data-stale="true"] .movie { pointer-events: none; }
+/* Auto level: the earbuds are not using the saved value, so no thumb claims one */
+input[type="range"][data-auto="true"]::-webkit-slider-thumb { background: transparent; border-color: transparent; }
+@keyframes pulse { 50% { opacity: 0.55; } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

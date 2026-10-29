@@ -1,0 +1,23 @@
+__pycache__/
+*.pyc
+
+# local state written at run time
+tool/baseline.json
+tool/previous.json
+tray/settings.json
+tray/*.log
+*.log
+
+# never commit the official app or anything derived from it
+*.apk
+jadx/
+
+# raw captures stay local
+*.pcap
+*.btsnoop
+*.cfa
+btsnoop*
+capture*/
+.env
+.vscode/
+.idea/
