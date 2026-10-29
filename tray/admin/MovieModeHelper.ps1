@@ -19,6 +19,31 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $DataDir  = 'C:\ProgramData\TechnicsAZ100Tool'
+
+# Everything below trusts DataDir, so first make sure no ordinary user could have planted or changed anything in it.
+$AdminSids   = @('S-1-5-18', 'S-1-5-32-544', 'S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464')  # SYSTEM, Administrators, TrustedInstaller
+$WriteRights = [Security.AccessControl.FileSystemRights]'Write, Delete, DeleteSubdirectoriesAndFiles, ChangePermissions, TakeOwnership'
+function Get-UntrustedReason($dir) {
+  if (-not (Test-Path -LiteralPath $dir)) { return $null }      # a missing folder is reported further down
+  $items = @(Get-Item -LiteralPath $dir -Force) + @(Get-ChildItem -LiteralPath $dir -Force)
+  foreach ($item in $items) {
+    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { return "$($item.FullName) is a link" }
+    $acl = Get-Acl -LiteralPath $item.FullName
+    if ($AdminSids -notcontains $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value) { return "$($item.FullName) is not owned by an administrator" }
+    foreach ($r in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+      if ($r.AccessControlType -eq 'Allow' -and ($r.FileSystemRights -band $WriteRights) -and $AdminSids -notcontains $r.IdentityReference.Value) {
+        return "$($item.FullName) can be changed by $($r.IdentityReference.Value)"
+      }
+    }
+  }
+  $null
+}
+$untrusted = Get-UntrustedReason $DataDir
+if ($untrusted) {                                               # write nothing at all, not even the result file
+  Write-Host "refused: $untrusted. Run setup_movie_helper.ps1 again."
+  exit 1
+}
+
 # The earbuds chosen at setup (device.txt, administrators write, users read) and nothing else
 $Addr     = (Get-Content -LiteralPath (Join-Path $DataDir 'device.txt') -TotalCount 1 -ErrorAction SilentlyContinue)
 $Addr     = if ($Addr -match '^\s*([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\s*$') { $Addr.Trim() } else { $null }
