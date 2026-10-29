@@ -93,6 +93,17 @@ The setup first backs up the driver's settings for your earbuds to `C:\ProgramDa
 analysis of the Android app, an HCI capture of the app, and live tests. [`docs/DESIGN.md`](docs/DESIGN.md) describes the tray UI.
 No code or assets from the official app are included here.
 
+## Legal
+
+- This is an independent project, made so that earbuds you own can work with Windows. It is not affiliated with, endorsed by or
+  supported by Panasonic, Technics or Airoha. Product names are used only to say what the tool works with.
+- The repository contains only original code and notes. It includes no code, binaries, firmware, images or other assets from the
+  official app or the earbuds. The protocol was worked out from the app's behaviour for interoperability. No encryption, copy
+  protection or access control was bypassed; the earbuds' control channel has none.
+- Using third-party software with your earbuds may affect your warranty. The software comes with no warranty (see the license), and
+  you use it at your own risk.
+- If you represent a rights holder and have a concern, please open an issue.
+
 ## License
 
 [MIT](LICENSE)
