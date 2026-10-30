@@ -13,6 +13,22 @@ earbuds over their own Bluetooth control channel (Airoha RACE over RFCOMM), the 
 > Unofficial. Not affiliated with, endorsed by or supported by Panasonic or Technics. "Technics" is a trademark of Panasonic Holdings
 > Corporation. Use at your own risk.
 
+## Contents
+
+- [What it can do](#what-it-can-do)
+- [Screenshots](#screenshots)
+- [Safety](#safety)
+- [Requirements](#requirements)
+- [Tray app](#tray-app)
+- [Command line](#command-line)
+- [Finding the earbuds](#finding-the-earbuds)
+- [Movie mode (optional)](#movie-mode-optional)
+- [How it works](#how-it-works)
+- [How it was built](#how-it-was-built)
+  - [Tools](#tools)
+- [Legal](#legal)
+- [License](#license)
+
 ## What it can do
 
 - Switch between **Off**, **Noise cancelling** and **Ambient**, and set each level (1 to 100)
