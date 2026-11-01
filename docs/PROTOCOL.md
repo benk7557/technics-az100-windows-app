@@ -127,10 +127,13 @@ GET_CRADLE_BATTERY id 64 (no payload) -> RSP [status, percent 0..100]; other val
 All three are polled by the official app itself (connect + every 10 min). The tool allowlists exactly these (id, payload) pairs.
 
 ## TRAY APP (tray/, built with Impeccable direction "Audiogram Chart"; visual spec in docs/DESIGN.md)
-Python + pystray + pywebview (WebView2). Left-click toggles the flyout, right-click menu (Open, Start with Windows, Quit).
+Python + pystray + pywebview (WebView2). Left-click toggles the flyout, right-click menu (Open, Start with Windows, Keep control on this PC, Release to phone, Quit).
 One persistent Session while the flyout is open (closes 30 s after it hides); writes 500 ms apart, trailing value wins, read-back verified.
 Tested with --demo (fake earbuds): dark mode in the real window, click and drag, hide on outside click; light mode, Off, loading and error
 states in a browser with emulated colour scheme. Needs the earbuds connected to this PC for the real run.
+2026-11-01: Multipoint, verified on hardware: one RACE controller at a time, first to connect keeps it; the phone app cannot take the
+channel from the PC and the PC is refused at once while the phone app holds it. The tray now holds the channel while "Keep control on
+this PC" is on (default) and re-takes it with backoff 5/10/30/60 s; the 30 s idle release applies only when that setting is off.
 
 ## v2 ADDITIONS, VERIFIED ON HARDWARE (2026-10-21)
 New writes (the ONLY writes the tool can send are now: id 11 [mode,nc,amb]; id 104 [0|1]; id 34 [0,0]|[1,1]):

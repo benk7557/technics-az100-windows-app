@@ -70,7 +70,9 @@ Tested on one AZ100E (firmware JNZ1ZE 1.040) with Windows 11. Other AZ100 varian
 - Windows 11 (Windows 10 is untested) with the earbuds paired and connected to the PC
 - Python 3.12 or later
 - For the tray app: the Microsoft Edge WebView2 runtime (included with Windows 11)
-- Close the Technics app on your phone while using this, because only one controller can hold the control channel
+- The earbuds take one controller at a time. The tray keeps control while it runs (**Keep control on this PC** in the tray menu, on
+  by default), so the Technics app on your phone can't take it meanwhile. **Release to phone** hands it over. If the phone app had
+  it first, the tray shows "In use by phone" and takes over by itself once the phone app is closed.
 
 ## Tray app
 
@@ -79,7 +81,8 @@ pip install -r tray/requirements.txt
 tray\start.cmd
 ```
 
-Left-click the tray icon to open the flyout. Right-click it for **Start with Windows** and **Quit**. To try the UI without earbuds, run
+Left-click the tray icon to open the flyout. Right-click it for **Start with Windows**, **Keep control on this PC**, **Release to phone**
+and **Quit**. Opening the flyout or using the hotkey takes control back after a release. To try the UI without earbuds, run
 `python tray/app.py --demo --show`.
 
 The hotkey is set in `tray/settings.json`, which is created on first run.
