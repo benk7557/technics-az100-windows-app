@@ -45,7 +45,7 @@ earbuds, so it never claims a change the earbuds did not confirm.
 
 | Auto level | Attention mode | Off | Low latency switching |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/images/nc_auto_dark.png" alt="Noise cancelling with Auto level on" width="190"> | <img src="docs/images/attention_dark.png" alt="Ambient sound with Attention selected" width="190"> | <img src="docs/images/off_light.png" alt="Off, with the saved noise cancelling level kept" width="190"> | <img src="docs/images/movie_switching_dark.png" alt="Low latency switching, with a progress bar" width="190"> |
+| <img src="docs/images/nc_auto_dark.png" alt="Noise cancelling with Auto level on" width="190"> | <img src="docs/images/attention_dark.png" alt="Ambient sound with Attention selected" width="190"> | <img src="docs/images/off_light.png" alt="Off, with the saved noise cancelling level kept" width="190"> | <img src="docs/images/low_latency_switching_dark.png" alt="Low latency switching, with a progress bar" width="190"> |
 | The earbuds pick the noise cancelling level | Brings voices and announcements forward | Levels are kept for next time | Live progress while audio reconnects |
 
 <img src="docs/images/tray_icon.png" alt="The tray icon at several sizes on light and dark taskbars, normal and dimmed" width="280">
