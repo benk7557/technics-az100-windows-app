@@ -249,7 +249,7 @@
       const b = st.busy && st.expected_s > 0 ? Math.min(1, (st.elapsed_s || 0) / st.expected_s) : 0;
       M.frac = Math.max(M.frac, Math.min(0.97, (a + b) / 2));   // never backwards, never claims done early
       frac = M.frac;
-    } else if (st.active == null) { unknown = true; disabled = true; text = 'Movie mode state unknown'; }
+    } else if (st.active == null) { unknown = true; disabled = true; text = 'Low latency state unknown'; }
     else {
       checked = st.active === true;
       const c = st.codec;
@@ -274,7 +274,7 @@
     const seq = ++M.seq;
     const res = await call('movie_status');
     if (seq !== M.seq) return;   // a newer answer is already drawn
-    if (res && res.error && typeof res.error === 'object') { M.st = null; M.err = res.error.message || 'Movie mode is unavailable.'; }
+    if (res && res.error && typeof res.error === 'object') { M.st = null; M.err = res.error.message || 'Low latency is unavailable.'; }
     else {
       M.st = res; M.err = null;
       if (res.busy) M.startedAt = 0;
@@ -297,7 +297,7 @@
     renderMovie();
     const res = await call('movie_set', on);
     M.sending = false;
-    if (res && res.error) { M.err = res.error.message || 'Could not switch Movie mode.'; M.st = { ...st, error: M.err }; renderMovie(); return; }
+    if (res && res.error) { M.err = res.error.message || 'Could not switch Low latency.'; M.st = { ...st, error: M.err }; renderMovie(); return; }
     M.startedAt = Date.now();
     renderMovie();
     movieRefresh();

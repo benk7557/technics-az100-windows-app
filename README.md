@@ -22,7 +22,7 @@ earbuds over their own Bluetooth control channel (Airoha RACE over RFCOMM), the 
 - [Tray app](#tray-app)
 - [Command line](#command-line)
 - [Finding the earbuds](#finding-the-earbuds)
-- [Movie mode (optional)](#movie-mode-optional)
+- [Low latency (optional)](#low-latency-optional)
 - [How it works](#how-it-works)
 - [How it was built](#how-it-was-built)
   - [Tools](#tools)
@@ -36,16 +36,16 @@ earbuds over their own Bluetooth control channel (Airoha RACE over RFCOMM), the 
 - Live stream mode (**Auto**, suppress interruptions, or reduce delay)
 - Read the battery level of each earbud and the case, plus the codec in use (LDAC / AAC / SBC and sample rate)
 - Global hotkey **Ctrl+Alt+E** to cycle Off → Noise cancelling → Ambient
-- Optional **Movie mode**, for the [Alternative A2DP Driver](https://www.bluetoothgoodies.com/a2dp/) only: one switch from LDAC to SBC with "reduce delay" for lower latency, and back
+- Optional **Low latency**, for the [Alternative A2DP Driver](https://www.bluetoothgoodies.com/a2dp/) only: one switch from LDAC to SBC with "reduce delay" for lower latency, and back
 
 ## Screenshots
 
 The flyout opens from the tray icon and follows the Windows light or dark setting. Everything it shows has been read back from the
 earbuds, so it never claims a change the earbuds did not confirm.
 
-| Auto level | Attention mode | Off | Movie mode switching |
+| Auto level | Attention mode | Off | Low latency switching |
 |:---:|:---:|:---:|:---:|
-| <img src="docs/images/nc_auto_dark.png" alt="Noise cancelling with Auto level on" width="190"> | <img src="docs/images/attention_dark.png" alt="Ambient sound with Attention selected" width="190"> | <img src="docs/images/off_light.png" alt="Off, with the saved noise cancelling level kept" width="190"> | <img src="docs/images/movie_switching_dark.png" alt="Movie mode switching, with a progress bar" width="190"> |
+| <img src="docs/images/nc_auto_dark.png" alt="Noise cancelling with Auto level on" width="190"> | <img src="docs/images/attention_dark.png" alt="Ambient sound with Attention selected" width="190"> | <img src="docs/images/off_light.png" alt="Off, with the saved noise cancelling level kept" width="190"> | <img src="docs/images/movie_switching_dark.png" alt="Low latency switching, with a progress bar" width="190"> |
 | The earbuds pick the noise cancelling level | Brings voices and announcements forward | Levels are kept for next time | Live progress while audio reconnects |
 
 <img src="docs/images/tray_icon.png" alt="The tray icon at several sizes on light and dark taskbars, normal and dimmed" width="280">
@@ -109,9 +109,9 @@ The earbuds are found automatically: the tool looks for a paired Bluetooth devic
 one is found, give the address with `--addr XX:XX:XX:XX:XX:XX` or the `TECHNICS_ADDR` environment variable. Windows shows the address
 under Device Manager → Bluetooth → the earbuds → Properties → Details → Bluetooth device address.
 
-## Movie mode (optional)
+## Low latency (optional)
 
-Movie mode only applies if you use the paid Alternative A2DP Driver for LDAC. The driver's settings can only be changed by an
+Low latency only applies if you use the paid Alternative A2DP Driver for LDAC. The driver's settings can only be changed by an
 administrator, so a one-time setup installs a small helper that is allowed to do exactly two things: switch to the movie profile, and
 switch back to your saved music settings. Run it from an elevated PowerShell:
 
@@ -121,7 +121,7 @@ powershell -ExecutionPolicy Bypass -File tray\admin\setup_movie_helper.ps1      
 
 The setup installs the helper in `C:\Program Files\TechnicsAZ100Tool`, where only administrators can change it, and first backs up
 the driver's settings for your earbuds to its `data` folder. To undo it, run
-`tray\admin\remove_movie_helper.ps1`. If you never run the setup, the Movie mode switch stays hidden.
+`tray\admin\remove_movie_helper.ps1`. If you never run the setup, the Low latency switch stays hidden.
 
 ## How it works
 
@@ -146,7 +146,7 @@ and writing the code.
   and verified. That came to about 25 writes with no errors. A fake-earbud simulator runs the same checks offline (`selftest`).
 - **Fixed what live use exposed.** Windows' clock ticks about every 15 ms, which made every read wait a full 250 ms timeout.
   A race let the UI show a state the earbuds weren't in. The hotkey could hold the control channel open forever.
-- **Hardened the elevated part.** The Movie mode helper runs only as two fixed scheduled tasks that take no input. A security review
+- **Hardened the elevated part.** The Low latency helper runs only as two fixed scheduled tasks that take no input. A security review
   then moved its data to a folder only administrators can write.
 
 ### Tools
@@ -159,7 +159,7 @@ and writing the code.
 | Bluetooth on Windows | Python `ctypes` over Winsock (SDP lookup, RFCOMM sockets) and `bthprops` |
 | Tray app | Python, [pystray](https://github.com/moses-palmer/pystray), [pywebview](https://pywebview.flowrl.com/) (Edge WebView2), Pillow, HTML/CSS/JS |
 | UI testing | Playwright (light/dark, states, interaction) |
-| Movie mode | PowerShell, Windows Task Scheduler, [Alternative A2DP Driver](https://www.bluetoothgoodies.com/a2dp/) |
+| Low latency | PowerShell, Windows Task Scheduler, [Alternative A2DP Driver](https://www.bluetoothgoodies.com/a2dp/) |
 | Development | Claude Code; Impeccable for UI design direction and review |
 
 ## Legal

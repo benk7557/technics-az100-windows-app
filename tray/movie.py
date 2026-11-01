@@ -1,4 +1,4 @@
-"""Movie mode: lower-latency Bluetooth audio for video, one switch.
+"""Low latency (internally "movie"): lower-latency Bluetooth audio, one switch.
 
 Movie  = driver codec LDAC -> SBC (via the elevated helper task), reconnect the audio profile, earbuds "Reduce sound delay" = Video.
 Music  = the saved driver settings are restored, reconnect, earbuds delay mode back to Auto.
@@ -149,12 +149,12 @@ class MovieMode:
 
     def start(self, on):
         if not isinstance(on, bool):
-            return {"error": {"kind": "invalid", "message": "movie mode must be true or false"}}
+            return {"error": {"kind": "invalid", "message": "low latency must be true or false"}}
         if not self._supported_now():
-            return {"error": {"kind": "closed", "message": "Movie mode is not set up yet."}}
+            return {"error": {"kind": "closed", "message": "Low latency is not set up yet."}}
         with self._lock:
             if self._busy:
-                return {"error": {"kind": "busy", "message": "Movie mode is already switching."}}
+                return {"error": {"kind": "busy", "message": "Low latency is already switching."}}
             self._busy, self._target, self._error = True, "movie" if on else "music", None
             self._phase, self._step, self._t0 = "Starting", 0, time.monotonic()
         threading.Thread(target=self._run, args=(on,), daemon=True, name="movie-mode").start()
