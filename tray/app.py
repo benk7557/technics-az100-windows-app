@@ -29,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "tool"))
 import technics as T  # noqa: E402
 from movie import MovieMode  # noqa: E402
+from keeper import Keeper  # noqa: E402
 
 TITLE = "Technics AZ100 Flyout"
 CSS_W, CSS_H, MARGIN = 344, 577, 12      # flyout size and gap from the taskbar, in CSS pixels
@@ -65,7 +66,7 @@ kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 kernel32.GetCurrentThreadId.restype = wt.DWORD
 
 SETTINGS_PATH = os.path.join(HERE, "settings.json")
-DEFAULT_SETTINGS = {"cycle_hotkey": "ctrl+alt+e"}
+DEFAULT_SETTINGS = {"cycle_hotkey": "ctrl+alt+e", "keep_control": True}
 WM_HOTKEY, WM_QUIT = 0x0312, 0x0012
 MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN, MOD_NOREPEAT = 0x1, 0x2, 0x4, 0x8, 0x4000
 HOTKEY_ID = 0x7A01
@@ -132,6 +133,15 @@ def load_settings():
     except Exception:
         logging.exception("could not read settings.json; using defaults")
     return data
+
+
+def save_setting(key, value):
+    """Change one key in settings.json and keep the rest, including keys added by hand."""
+    data = load_settings()
+    data[key] = value
+    with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
 
 
 # ---------------------------------------------------------------- device backends
@@ -392,14 +402,21 @@ class App:
         self.hotkey_tid = None
         self.cycling = threading.Lock()
         self.unreach_notified = False
+        self.demo = demo
+        self.keep_control = load_settings().get("keep_control") is not False   # hold the channel so the phone app cannot take it
+        self.released = False          # the user handed control to the phone; opening the flyout or the hotkey takes it back
+        self.busy = False              # the last attempt was refused because another device (the phone) holds the channel
+        self.keeper = None
 
     def note(self, res):
         """Keep the tray icon and tooltip in step with what the earbuds last said."""
         try:
             if "error" in res:
                 self.connected = False
+                self.busy = res["error"].get("kind") == "busy"
             else:
                 self.connected = True
+                self.busy = False
                 if "mode" in res:
                     self.state = (res["mode"], res["nc"], res["amb"])
                 if res.get("adaptive") is not None:
@@ -413,7 +430,11 @@ class App:
         return res
 
     def build_tip(self):
-        if self.connected is False or self.state is None:
+        if self.released:
+            tip = "EAH-AZ100: released to your phone"
+        elif self.busy:
+            tip = "EAH-AZ100: in use by your phone"
+        elif self.connected is False or self.state is None:
             tip = "EAH-AZ100: not connected"
         else:
             mode, nc, amb = self.state
@@ -446,6 +467,7 @@ class App:
         return user32.FindWindowW(None, TITLE)
 
     def show(self):
+        self.take_back()
         if self.close_timer:
             self.close_timer.cancel()
         hwnd = self.hwnd()
@@ -484,8 +506,44 @@ class App:
         self.close_timer.start()
 
     def _close_if_idle(self):
-        if not self.visible and not self.cycling.locked():
+        if not self.visible and not self.cycling.locked() and not self.holding():
             self.device.close()
+
+    def holding(self):
+        """True while this PC should keep the control channel (the keeper re-takes it when lost)."""
+        return self.keep_control and not self.released
+
+    def kick(self):
+        if self.keeper:
+            self.keeper.kick()
+
+    def take_back(self):
+        """A deliberate use (flyout or hotkey) ends a release to the phone."""
+        if self.released:
+            self.released = False
+            self.kick()
+
+    def toggle_keep(self, *_):
+        self.keep_control = not self.keep_control
+        try:
+            save_setting("keep_control", self.keep_control)
+        except OSError:
+            logging.exception("could not save keep_control")
+        if self.keep_control:
+            self.released = False
+            self.kick()
+        elif not self.visible:
+            self.schedule_close()      # back to letting go 30 s after the last use
+
+    def release(self, *_):
+        """Hand the control channel to the phone on purpose."""
+        if self.close_timer:
+            self.close_timer.cancel()
+        self.released = True
+        self.device.close()
+        self.connected = False
+        self.build_tip()
+        self.refresh_icon()
 
     def toggle(self, *_):
         if self.visible:
@@ -495,6 +553,8 @@ class App:
 
     def quit(self, *_):
         logging.info("quit")
+        if self.keeper:
+            self.keeper.stop()
         self.stop_hotkey()
         try:
             self.device.close()
@@ -550,6 +610,7 @@ class App:
             logging.info("hotkey ignored: a cycle is still running")
             return
         try:
+            self.take_back()
             # read-modify-write under ONE lock hold: a slider write from the flyout cannot slip in between the read
             # and the write and then be overwritten with the old levels
             with self.device.lock:
@@ -606,7 +667,9 @@ class App:
             pystray.MenuItem("Open", self.toggle, default=True),
             pystray.MenuItem("Start with Windows", lambda *_: set_autostart(not autostart_enabled()),
                              checked=lambda *_: autostart_enabled()),
-            pystray.MenuItem(lambda _: "Cycle mode: %s" % (self.hotkey_label if self.hotkey_ok else "unavailable"),
+            pystray.MenuItem("Keep control on this PC", self.toggle_keep, checked=lambda item: self.keep_control),
+            pystray.MenuItem("Release to phone", self.release, enabled=lambda item: not self.demo and self.connected is True),
+            pystray.MenuItem(lambda _:"Cycle mode: %s" % (self.hotkey_label if self.hotkey_ok else "unavailable"),
                              None, enabled=False),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", self.quit),
@@ -614,6 +677,9 @@ class App:
         self.icon = pystray.Icon("technics-az100", make_icon(self.light), self.tip, menu)
         threading.Thread(target=self.watch_taskbar_theme, daemon=True).start()
         self.start_hotkey()
+        if not self.demo:
+            self.keeper = Keeper(read=lambda: wrap(self.device.poll_state), on_result=self.note, wanted=self.holding)
+            threading.Thread(target=self.keeper.run, daemon=True).start()
         if show_now:
             threading.Timer(1.0, self.show).start()
         self.icon.run()
