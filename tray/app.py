@@ -33,7 +33,7 @@ from keeper import Keeper  # noqa: E402
 
 TITLE = "Technics AZ100 Flyout"
 CSS_W, CSS_H, MARGIN = 344, 577, 12      # flyout size and gap from the taskbar, in CSS pixels
-CLOSE_AFTER_HIDE_S = 30                      # drop the control channel this long after the flyout closes
+CLOSE_AFTER_HIDE_S = 30                      # when Keep control is off: drop the control channel this long after the last use
 RUN_KEY, RUN_NAME = r"Software\Microsoft\Windows\CurrentVersion\Run", "TechnicsAZ100Tray"
 
 logging.basicConfig(filename=os.path.join(HERE, "app.log"), level=logging.INFO,
@@ -246,11 +246,19 @@ class Api:
     def __init__(self, app):
         self._app = app
 
+    def _device(self, fn):
+        """Run one device call, unless control was released to the phone: a call queued before the release must not
+        take the channel back."""
+        with self._app.device.lock:
+            if self._app.released:
+                raise T.DeviceError("released", "Released to your phone. Open this again to take control back.")
+            return fn()
+
     def snapshot(self):
-        return self._app.note(wrap(lambda: self._app.device.snapshot()))
+        return self._app.note(wrap(lambda: self._device(self._app.device.snapshot)))
 
     def poll(self):
-        return self._app.note(wrap(lambda: self._app.device.poll_state()))
+        return self._app.note(wrap(lambda: self._device(self._app.device.poll_state)))
 
     def set_adaptive(self, on):
         def run():
@@ -258,7 +266,7 @@ class Api:
                 flag = bool(on)
             else:
                 raise ValueError("adaptive must be true or false")
-            state, ok = self._app.device.set_adaptive(flag)
+            state, ok = self._device(lambda: self._app.device.set_adaptive(flag))
             return {"ok": bool(ok), "adaptive": bool(state)}
         return self._app.note(wrap(run))
 
@@ -266,13 +274,13 @@ class Api:
         def run():
             if isinstance(sub, bool) or not isinstance(sub, int) or sub not in (0, 1):
                 raise ValueError("ambient sub-mode must be 0 or 1")
-            state, ok = self._app.device.set_ambient_sub(sub)
+            state, ok = self._device(lambda: self._app.device.set_ambient_sub(sub))
             return {"ok": bool(ok), "ambient_sub": int(state)}
         return self._app.note(wrap(run))
 
     def apply(self, mode, nc, amb):
         def run():
-            state, ok = self._app.device.set_outside(int(mode), int(nc), int(amb))
+            state, ok = self._device(lambda: self._app.device.set_outside(int(mode), int(nc), int(amb)))
             return {"ok": bool(ok), "mode": state[0], "nc": state[1], "amb": state[2]}
         return self._app.note(wrap(run))
 
@@ -644,7 +652,7 @@ class App:
         except (T.DeviceError, T.WriteUnconfirmed, OSError) as exc:
             logging.info("cycle failed: %s", exc)
             self.note({"error": {"kind": getattr(exc, "kind", "closed"), "message": str(exc)}})
-            self.toast("Earbuds not reachable")     # every failed press says so: silence would look like a dead key
+            self.toast("In use by your phone" if getattr(exc, "kind", None) == "busy" else "Earbuds not reachable")     # every failed press says so: silence would look like a dead key
         except Exception:
             logging.exception("cycle failed")
         finally:
