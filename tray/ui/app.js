@@ -18,6 +18,8 @@
     epoch: 0,
     stale: false,   // the flyout was just reopened: what is drawn may be old until the first fresh read lands
     hotkey: null,   // label of the global shortcut, if it is registered
+    errKind: null,  // kind of the last error: 'busy' means the phone holds the earbuds
+    retrying: false,
   };
   let api = null, sendTimer = null, pollTimer = null;
   const pending = () => S.pend.apply || S.pend.adaptive || S.pend.sub;
@@ -47,7 +49,7 @@
     $('#plate').setAttribute('aria-busy', String(S.phase === 'loading' || S.stale));
     const usable = S.phase === 'ready';
     // while loading the placeholders hold no text at all, so nothing unconfirmed is ever announced
-    els.link.textContent = S.phase === 'loading' ? '' : S.phase === 'error' ? 'Not connected' : codecText(S.codec);
+    els.link.textContent = S.phase === 'loading' ? '' : S.phase === 'error' ? (S.errKind === 'busy' ? 'In use by phone' : 'Not connected') : codecText(S.codec);
 
     els.seg.querySelectorAll('[role=radio]').forEach((b) => {
       const on = usable && Number(b.dataset.mode) === S.mode;   // nothing looks chosen until the earbuds answered
@@ -135,6 +137,7 @@
     S.phase = 'error';
     S.stale = false;
     S.pend = { apply: false, adaptive: false, sub: false };   // an error ends any queued writes; nothing may fire after it
+    S.errKind = err.kind || null;
     render();
     setStatus(err.message || 'Something went wrong.');
   }
@@ -153,7 +156,15 @@
     setStatus('Up to date');
   }
 
+  // while the flyout shows an error, try again on the normal poll tick: the phone may have let go of the channel
+  async function retryQuietly() {
+    if (S.retrying) return;
+    S.retrying = true;
+    try { await loadFull(); } finally { S.retrying = false; }
+  }
+
   async function poll(force) {
+    if (S.visible && S.phase === 'error' && force !== true) return retryQuietly();
     if ((!S.visible && force !== true) || S.phase !== 'ready' || S.writing || pending() || S.dragging) return;
     if (Date.now() - S.lastFull > FULL_REFRESH_MS) return loadFull();
     const epoch = S.epoch;
