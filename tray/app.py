@@ -513,6 +513,13 @@ class App:
         """True while this PC should keep the control channel (the keeper re-takes it when lost)."""
         return self.keep_control and not self.released
 
+    def keeper_read(self):
+        """The keeper's poll, checked under the device lock so it cannot reopen the channel just after a release."""
+        with self.device.lock:
+            if not self.holding():
+                return {"error": {"kind": "released", "message": "Released to your phone."}}
+            return wrap(self.device.poll_state)
+
     def kick(self):
         if self.keeper:
             self.keeper.kick()
@@ -537,10 +544,12 @@ class App:
 
     def release(self, *_):
         """Hand the control channel to the phone on purpose."""
+        self.hide()                      # a visible flyout would poll and take the channel straight back
         if self.close_timer:
             self.close_timer.cancel()
-        self.released = True
-        self.device.close()
+        with self.device.lock:           # no keeper read can reopen the channel between these two lines
+            self.released = True
+            self.device.close()
         self.connected = False
         self.build_tip()
         self.refresh_icon()
@@ -669,7 +678,7 @@ class App:
                              checked=lambda *_: autostart_enabled()),
             pystray.MenuItem("Keep control on this PC", self.toggle_keep, checked=lambda item: self.keep_control),
             pystray.MenuItem("Release to phone", self.release, enabled=lambda item: not self.demo and self.connected is True),
-            pystray.MenuItem(lambda _:"Cycle mode: %s" % (self.hotkey_label if self.hotkey_ok else "unavailable"),
+            pystray.MenuItem(lambda _: "Cycle mode: %s" % (self.hotkey_label if self.hotkey_ok else "unavailable"),
                              None, enabled=False),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", self.quit),
@@ -678,7 +687,7 @@ class App:
         threading.Thread(target=self.watch_taskbar_theme, daemon=True).start()
         self.start_hotkey()
         if not self.demo:
-            self.keeper = Keeper(read=lambda: wrap(self.device.poll_state), on_result=self.note, wanted=self.holding)
+            self.keeper = Keeper(read=self.keeper_read, on_result=self.note, wanted=self.holding)
             threading.Thread(target=self.keeper.run, daemon=True).start()
         if show_now:
             threading.Timer(1.0, self.show).start()

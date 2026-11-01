@@ -141,7 +141,7 @@ New writes (the ONLY writes the tool can send are now: id 11 [mode,nc,amb]; id 1
 - Ambient sub-mode. GET 33 `05 5a 02 00 21 00` -> RSP [status, a, m]. SET 34 `05 5a 04 00 22 00 <a> <m>`: Transparent = 00 00, Attention = 01 01
   (the official app only ever sends these two; Attention also stops playback when switching into Ambient, per its own text). Verified both ways.
 Tray app v2: compact battery plot, option band (Auto level switch in Noise cancelling, Transparent/Attention in Ambient), one serialized write queue,
-global hotkey Ctrl+Alt+E (cycles Off -> Noise cancelling -> Ambient, settings in tray/settings.json), idle channel release 30 s after last use.
+global hotkey Ctrl+Alt+E (cycles Off -> Noise cancelling -> Ambient, settings in tray/settings.json), idle channel release 30 s after last use (since 2026-11-01 only when 'Keep control on this PC' is off).
 Bugs found by live testing and fixed:
 - Windows monotonic clock ticks ~15 ms: a strict ">" deadline test made every read wait a full 250 ms receive timeout (now ">="; connect + full state read ~0.3 s).
 - Stale-read race: a refresh that began before a write could overwrite the screen after it (UI showed a state the earbuds were not in).
